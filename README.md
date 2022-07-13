@@ -1,6 +1,6 @@
-# simple-rule
+# cal-rule
 
-A simple frontend rule solution.
+A simple javascript/typescript calculating rule solution.
 
 operator `&` `|` `!` `()` are supported.
 
@@ -9,7 +9,7 @@ operator `&` `|` `!` `()` are supported.
 ## install
 
 ```bash
-npm install simple-rule
+npm install judge
 ```
 
 ## usage
@@ -17,7 +17,7 @@ npm install simple-rule
 ### init
 
 ```javascript
-import { init } from 'simple-rule';
+import { init } from 'judge';
 
 const ruleStr = '1A&2B';
 
@@ -32,7 +32,7 @@ const rule = init<string>(ruleStr);
 
 if `ruleStr` is invalid, `init` will return `undefined`;
 
-### inject & parse
+### choices & values & parse
 
 pass the value to rule, parse the
 
@@ -47,14 +47,33 @@ const choices = [
 
 const values = ['option1A', 'option2B', undefined];
 
-// since the ruleStr only infer to the value of position [0] and [1], choices[2] and values[2] can be passed but ignored.
-rule.inject(choices, values);
+// since the ruleStr only infer to the value of position [0] and [1], choices[2] and values[2] will be passed but ignored.
+rule.choices = choices;
+rule.values = values;
 
 // true
 const ans: boolean = rule.parse();
 ```
 
-`parse` can pass a function to judge if the values;
+If there is a `input` value instead of `select`, which means no choices can be provided, `undefined` is ok to be passed as an item of `choices`.
+
+```typescript
+const ruleStr = '1A&2';
+
+const rule = init(ruleStr);
+
+const choices = [['option1A', 'option1B', 'option1C'], undefined, ['option3A', 'option3B']];
+
+const values = ['option1A; option1B; option1C', 'input value', undefined];
+
+rule.choices = choices;
+rule.values = values;
+
+// true
+const ans: boolean = rule.parse();
+```
+
+`parse` provide a functional param to cover the default calculator;
 
 ```typescript
 const choices = [
@@ -65,15 +84,19 @@ const choices = [
 
 const values = ['option1A; option1B; option1C', 'option2B; option2D', undefined];
 
-rule.inject(choices, values);
+rule.choices = choices;
+rule.values = values;
 
 // true
 const ans: boolean = rule.parse((value, choice): boolean => {
-  return value.includes(choice);
+  if (value) {
+    return value.includes(choice);
+  }
+  return false;
 });
 ```
 
-The second param `choice` is defined by ruleStr and choices.
+The second param `choice` is defined by ruleStr and choices. `1A` means `choices[0][0]`, while `2B` means `choices[1][1]`
 
 In `1A&2B` case:
 
@@ -83,10 +106,27 @@ In `1A&2B` case:
 | 1      | `'option2B; option2D'`           | `'option2B'` | `2B`    | true            |
 | 2      | values                           | choices      | `1A&2B` | ans[0] & ans[1] |
 
-Default function is
+Default function pass to parse ↓
 
 ```typescript
 (value, choice) => {
-  return value === choice;
+  if (choice) {
+    return value === choice;
+  } else {
+    return value.trim().length > 0;
+  }
+};
+```
+
+### calculator
+
+`cal-rule` allows developer to customize the default calculating function on parse.
+
+```typescript
+rule.calculator = (value, choice): boolean => {
+  if (value) {
+    return value.includes(choice);
+  }
+  return false;
 };
 ```
