@@ -4,6 +4,8 @@ A simple frontend rule solution.
 
 operator `&` `|` `!` `()` are supported.
 
+`select` and `input` are supported.
+
 ## install
 
 ```bash
@@ -40,7 +42,7 @@ const rule = init(ruleStr);
 const choices = [
   ['option1A', 'option1B', 'option1C'],
   ['option2A', 'option2B', 'option2C', 'option2D'],
-  ['option3A', 'option3B'],
+  ['option3A', 'option3B']
 ];
 
 const values = ['option1A', 'option2B', undefined];
@@ -58,14 +60,10 @@ const ans: boolean = rule.parse();
 const choices = [
   ['option1A', 'option1B', 'option1C'],
   ['option2A', 'option2B', 'option2C', 'option2D'],
-  ['option3A', 'option3B'],
+  ['option3A', 'option3B']
 ];
 
-const values = [
-  'option1A; option1B; option1C',
-  'option2B; option2D',
-  undefined,
-];
+const values = ['option1A; option1B; option1C', 'option2B; option2D', undefined];
 
 rule.inject(choices, values);
 
