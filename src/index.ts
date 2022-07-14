@@ -1,25 +1,38 @@
 import config from './config';
 
 const regex = /\d+[A-Z]?/g;
+const operatorRegex = /^(\(|\)|\||&|!)*$/;
+
 class CalRule {
-  private rule: string;
+  readonly rule: string;
   private readonly ruleArr: string[];
   private readonly checkIndex: [number, number][];
   private readonly calArr: string[];
   constructor(rule: string) {
     this.rule = rule;
-    this.calArr = this.rule.split(regex);
+    this.calArr = this.rule.split(regex).map((item) => item.replace(/ /g, ''));
     const arr = this.rule.match(regex);
-    if (!arr) {
+    if (!arr || this.calArr.some((item) => !operatorRegex.test(item))) {
       throw new Error(`[cal-rule]: inValid rule ${rule}`);
     }
     this.ruleArr = arr;
+
     this.checkIndex = arr.map((item) => {
       const numIndex = Number((item.match(/\d+/) as Array<string>)[0]) - 1;
-      const alphabet = (item.match(/[A-Z]/) as Array<string>)[0];
-      const alphabetIndex = alphabet.length > 0 ? alphabet.charCodeAt(0) - 'A'.charCodeAt(0) : -1;
+      const alphabet = (item.match(/[A-Z]/) ?? [])[0];
+      const alphabetIndex = alphabet ? alphabet.charCodeAt(0) - 'A'.charCodeAt(0) : -1;
       return [numIndex, alphabetIndex];
     });
+
+    const testStr = this.combine(new Array(this.checkIndex.length).fill(true));
+    try {
+      const ans = eval(testStr);
+      if (typeof ans !== 'number') {
+        throw new Error();
+      }
+    } catch {
+      throw new Error(`[cal-rule]: inValid rule ${rule}`);
+    }
   }
 
   choices!: (string[] | undefined)[];
@@ -34,14 +47,23 @@ class CalRule {
     return false;
   };
 
+  private combine = (checkedArr: boolean[]) => {
+    let str = '';
+    this.calArr.forEach((ele, index) => {
+      str += ele;
+      str += checkedArr[index] ?? '';
+    });
+    return str;
+  };
+
   parse(
     calculator: (value: string | undefined, choice: string | undefined) => boolean = this.calculator
   ) {
     if (!this.choices) {
-      throw new Error('[cal-rule] choices needed');
+      throw new Error('[cal-rule]: choices needed');
     }
     if (!this.values) {
-      throw new Error('[cal-rule] values needed');
+      throw new Error('[cal-rule]: values needed');
     }
     const checkedArr = this.checkIndex.map((item, index) => {
       if (item[1] === -1) {
@@ -49,27 +71,24 @@ class CalRule {
       } else {
         const choicesItem = this.choices[item[0]];
         if (choicesItem) {
-          if (choicesItem[item[1]]) {
+          if (!choicesItem[item[1]]) {
             console.warn(
-              `[cal-rule] ${this.rule} require choice for position [${item[0]}][${item[1]}], but undefined is provided; Since this reason, rule ${this.ruleArr[index]} will always return false`
+              `[cal-rule]: ${this.rule} require choice for position [${item[0]}][${item[1]}], but undefined is provided; Since this reason, rule '${this.ruleArr[index]}' will always return false`
             );
             return false;
           }
           return calculator(this.values[item[0]], choicesItem[item[1]]);
         } else {
           console.warn(
-            `[cal-rule] ${this.rule} require choices for position [${item[0]}], but undefined is provided;  Since this reason, rule ${this.ruleArr[index]} will always return false`
+            `[cal-rule]: ${this.rule} require choices for position [${item[0]}], but undefined is provided; Since this reason, rule '${this.ruleArr[index]}' will always return false`
           );
           return false;
         }
       }
     });
-    let ansStr = '';
-    this.calArr.forEach((ele, index) => {
-      ansStr += ele;
-      ansStr += checkedArr[index] ?? '';
-    });
-    return !!(eval(ansStr) as number);
+    const ansStr = this.combine(checkedArr);
+    const ans = !!(eval(ansStr) as number);
+    return ans;
   }
 }
 export const init = (rule: string) => {
