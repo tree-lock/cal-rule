@@ -3,17 +3,51 @@ import config from './config';
 const regex = /\d+[A-Z]?/g;
 const operatorRegex = /^(\(|\)|\||&|!)*$/;
 
+export class CalRuleInValidError extends Error {
+  static readonly warning = (str: string) =>
+    `If you regard rule '${str}' as a valid rule, please commit your problem on https://github.com/darkXmo/cal-rule/issues`;
+
+  static readonly error = (str: string) => `[cal-rule]: inValid rule '${str}'`;
+
+  constructor(rule: CalRule) {
+    const str = rule.rule;
+    console.warn(CalRuleInValidError.warning(str));
+    super(CalRuleInValidError.error(str));
+  }
+}
+
+export class CalRuleRequiredError extends Error {
+  static readonly error = (str: string) => `[cal-rule]: ${str} is required`;
+  constructor(rule: CalRule) {
+    super(CalRuleRequiredError.error(rule.choices ? 'values' : 'choices'));
+  }
+}
+
+/** There will be a warning out, if choice(s) at `position` is required but not provided */
+export const ChoiceMissingWarning = (position: number[], ruleItem: string, rule: CalRule) => {
+  console.warn(
+    `[cal-rule]: ${rule.rule} require choice${
+      position.length === 1 ? 's' : ''
+    } for position ${position
+      .map((i) => `[${i}]`)
+      .join(
+        ''
+      )}, but undefined is provided; Since this reason, rule '${ruleItem}' will always return false`
+  );
+};
+
 class CalRule {
   readonly rule: string;
   private readonly ruleArr: string[];
   private readonly checkIndex: [number, number][];
   private readonly calArr: string[];
+
   constructor(rule: string) {
     this.rule = rule;
     this.calArr = this.rule.split(regex).map((item) => item.replace(/ /g, ''));
     const arr = this.rule.match(regex);
     if (!arr || this.calArr.some((item) => !operatorRegex.test(item))) {
-      throw new Error(`[cal-rule]: inValid rule ${rule}`);
+      throw new CalRuleInValidError(this);
     }
     this.ruleArr = arr;
 
@@ -24,15 +58,7 @@ class CalRule {
       return [numIndex, alphabetIndex];
     });
 
-    const testStr = this.combine(new Array(this.checkIndex.length).fill(true));
-    try {
-      const ans = eval(testStr);
-      if (typeof ans !== 'number') {
-        throw new Error();
-      }
-    } catch {
-      throw new Error(`[cal-rule]: inValid rule ${rule}`);
-    }
+    this.combine(new Array(this.checkIndex.length).fill(true));
   }
 
   choices!: (string[] | undefined)[];
@@ -53,17 +79,25 @@ class CalRule {
       str += ele;
       str += checkedArr[index] ?? '';
     });
-    return str;
+    try {
+      const ans = Function(`return ${str};`)();
+      if (typeof ans !== 'number') {
+        throw new Error();
+      }
+      return !!ans;
+    } catch {
+      throw new CalRuleInValidError(this);
+    }
   };
 
   parse(
     calculator: (value: string | undefined, choice: string | undefined) => boolean = this.calculator
   ) {
     if (!this.choices) {
-      throw new Error('[cal-rule]: choices needed');
+      throw new CalRuleRequiredError(this);
     }
     if (!this.values) {
-      throw new Error('[cal-rule]: values needed');
+      throw new CalRuleRequiredError(this);
     }
     const checkedArr = this.checkIndex.map((item, index) => {
       if (item[1] === -1) {
@@ -72,23 +106,17 @@ class CalRule {
         const choicesItem = this.choices[item[0]];
         if (choicesItem) {
           if (!choicesItem[item[1]]) {
-            console.warn(
-              `[cal-rule]: ${this.rule} require choice for position [${item[0]}][${item[1]}], but undefined is provided; Since this reason, rule '${this.ruleArr[index]}' will always return false`
-            );
+            ChoiceMissingWarning(item, this.ruleArr[index], this);
             return false;
           }
           return calculator(this.values[item[0]], choicesItem[item[1]]);
         } else {
-          console.warn(
-            `[cal-rule]: ${this.rule} require choices for position [${item[0]}], but undefined is provided; Since this reason, rule '${this.ruleArr[index]}' will always return false`
-          );
+          ChoiceMissingWarning([item[0]], this.ruleArr[index], this);
           return false;
         }
       }
     });
-    const ansStr = this.combine(checkedArr);
-    const ans = !!(eval(ansStr) as number);
-    return ans;
+    return this.combine(checkedArr);
   }
 }
 export const init = (rule: string) => {

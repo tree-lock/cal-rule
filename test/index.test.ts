@@ -1,4 +1,4 @@
-import CalRule, { init } from '../src/index';
+import CalRule, { CalRuleInValidError, CalRuleRequiredError, init } from '../src/index';
 describe('', () => {
   it('init', () => {
     const rule: CalRule = init('1A&2B');
@@ -11,29 +11,31 @@ describe('', () => {
   describe('error', () => {
     it('Unvalid rule <case: unexpected operator>', () => {
       const rule = '108*23';
-      expect(() => init(rule)).toThrowError(`[cal-rule]: inValid rule ${rule}`);
+      console.warn = jest.fn();
+      expect(() => init(rule)).toThrowError(CalRuleInValidError);
+    });
+
+    it('Unvalid rule <case: parse failed>', () => {
+      const rule = '1A&2B)';
+      console.warn = jest.fn();
+      expect(() => init(rule)).toThrowError(CalRuleInValidError);
     });
 
     it('Both Missing', () => {
       const rule: CalRule = init('1A&2B');
-      expect(() => rule.parse()).toThrowError('[cal-rule]: choices needed');
+      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
     });
 
     it('Missing choices', () => {
       const rule: CalRule = init('1A&2B');
       rule.values = [undefined, undefined, undefined];
-      expect(() => rule.parse()).toThrowError('[cal-rule]: choices needed');
+      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
     });
 
     it('Missing values', () => {
       const rule: CalRule = init('1A&2B');
       rule.choices = [undefined, undefined, undefined];
-      expect(() => rule.parse()).toThrowError('[cal-rule]: values needed');
-    });
-
-    it('Unvalid rule <case: parse failed>', () => {
-      const rule = '1A&2B)';
-      expect(() => init(rule)).toThrowError(`[cal-rule]: inValid rule ${rule}`);
+      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
     });
   });
 
@@ -192,6 +194,37 @@ describe('', () => {
       rule.values = values;
 
       expect(rule.parse()).toBe(false);
+    });
+  });
+
+  describe('1A&2B|!(3C&(4))', () => {
+    const rule = init('1A&2B|!(3C&(4))');
+    it('true&true|!(true&(true))', () => {
+      const choices = [
+        ['A', 'B', 'C', 'D'],
+        ['A', 'B', 'C', 'D'],
+        ['A', 'B', 'C', 'D'],
+        ['A', 'B', 'C', 'D']
+      ];
+      const values = ['A', 'B', 'C', 'D'];
+      rule.choices = choices;
+      rule.values = values;
+
+      expect(rule.parse()).toBe(!!Function('return ' + 'true&true|!(true&(true));')());
+    });
+
+    it('true&false|!(true&(true))', () => {
+      const choices = [
+        ['A', 'B', 'C', 'D'],
+        ['A', 'B', 'C', 'D'],
+        ['A', 'B', 'C', 'D'],
+        ['A', 'B', 'C', 'D']
+      ];
+      const values = ['A', undefined, 'C', 'D'];
+      rule.choices = choices;
+      rule.values = values;
+
+      expect(rule.parse()).toBe(!!Function('return ' + 'true&false|!(true&(true));')());
     });
   });
 });

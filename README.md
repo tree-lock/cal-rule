@@ -6,6 +6,10 @@ operator `&` `|` `!` `()` are supported.
 
 `select` and `input` are supported.
 
+> - `1A` means choose the first item of first choice;
+> - `1` means first value is valid;
+> - You can customize your own strategy as well;
+
 ## install
 
 ```bash
