@@ -9,11 +9,15 @@
     "prepare": "husky install",
     "lint": "eslint src/* --fix",
     "test": "jest",
+    "test:cov": "jest --coverage",
     "build": "tsc",
     "dev": "tsc --watch",
-    "ci": "npm run lint && npm run build && npm run test",
+    "ci": "npm run lint && npm run build",
     "release": "gulp"
   },
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/darkXmo/cal-rule.git"
