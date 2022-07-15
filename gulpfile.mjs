@@ -102,7 +102,7 @@ export async function publish() {
           {
             type: 'confirm',
             name: 'push',
-            message: `是否将修改push到gitlab`,
+            message: `是否将修改push到gitlab和github`,
             default: true
           }
         ]);
@@ -113,3 +113,5 @@ export async function publish() {
     }
   }
 }
+
+export default publish;

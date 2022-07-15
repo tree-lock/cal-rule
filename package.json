@@ -10,7 +10,8 @@
     "lint": "eslint src/* --fix",
     "test": "jest",
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "release": "gulp"
   },
   "repository": {
     "type": "git",
@@ -36,12 +37,15 @@
     "@types/jest": "^28.1.5",
     "@typescript-eslint/eslint-plugin": "^5.30.6",
     "@typescript-eslint/parser": "^5.30.6",
+    "chalk": "^5.0.1",
     "eslint": "^8.19.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
+    "fs-extra": "^10.1.0",
     "git-cz": "^4.9.0",
     "gulp": "^4.0.2",
     "husky": "^8.0.1",
+    "inquirer": "^9.0.1",
     "jest": "^28.1.2",
     "lint-staged": "^13.0.3",
     "prettier": "^2.7.1",
