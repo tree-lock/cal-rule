@@ -95,6 +95,7 @@ export async function publish() {
         if (!version.includes('beta')) {
           spawnSync(`git tag v${version}`, { stdio: 'inherit', shell: true });
           spawnSync(`git push origin --tags`, { stdio: 'inherit', shell: true });
+          spawnSync(`git push company --tags`, { stdio: 'inherit', shell: true });
         }
         npmPublish(version);
         spawnSync('git switch develop', { stdio: 'inherit', shell: true });
@@ -107,7 +108,9 @@ export async function publish() {
           }
         ]);
         if (answers.push) {
-          return spawnSync('git push --all', { stdio: 'inherit', shell: true });
+          spawnSync('git push --all', { stdio: 'inherit', shell: true });
+          spawnSync('git push company develop:develop', { stdio: 'inherit', shell: true });
+          return spawnSync('git push company main:master', { stdio: 'inherit', shell: true });
         }
       }
     }
