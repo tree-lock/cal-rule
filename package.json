@@ -1,6 +1,6 @@
 {
   "name": "cal-rule",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A simple javascript/typescript calculating rule solution. Support `1A&2B|!(3C&4D)`",
   "main": "dist/index.js",
   "scripts": {
@@ -35,6 +35,7 @@
   "devDependencies": {
     "@commitlint/cli": "^17.0.3",
     "@commitlint/config-conventional": "^17.0.3",
+    "@jest/types": "^28.1.3",
     "@types/jest": "^28.1.5",
     "@typescript-eslint/eslint-plugin": "^5.30.6",
     "@typescript-eslint/parser": "^5.30.6",
