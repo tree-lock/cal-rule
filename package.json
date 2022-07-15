@@ -1,6 +1,6 @@
 {
   "name": "cal-rule",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A simple javascript/typescript calculating rule solution. Support `1A&2B|!(3C&4D)`",
   "main": "dist/index.js",
   "scripts": {
