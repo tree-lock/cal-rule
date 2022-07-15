@@ -2,6 +2,8 @@
 
 A simple javascript/typescript calculating rule solution.
 
+> `1A&2B|!(3C&4D)`
+
 operator `&` `|` `!` `()` are supported.
 
 `select` and `input` are supported.

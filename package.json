@@ -1,24 +1,26 @@
 {
   "name": "cal-rule",
   "version": "0.1.0",
-  "description": "A simple frontend rule solution",
-  "main": "index.js",
+  "description": "A simple javascript/typescript calculating rule solution. Support `1A&2B|!(3C&4D)`",
+  "main": "dist/index.js",
   "scripts": {
     "c": "npm run commit",
     "commit": "git add . && git status && git-cz",
     "prepare": "husky install",
     "lint": "eslint src/* --fix",
-    "test": "jest"
+    "test": "jest",
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/darkXmo/simple-rule.git"
+    "url": "git+https://github.com/darkXmo/cal-rule.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/darkXmo/simple-rule/issues"
+    "url": "https://github.com/darkXmo/cal-rule/issues"
   },
   "lint-staged": {
     "src/**/*.ts": [
@@ -27,7 +29,7 @@
     ],
     "*.{ts,js,md,cjs,json}": "prettier --write  --ignore-unknown"
   },
-  "homepage": "https://github.com/darkXmo/simple-rule#readme",
+  "homepage": "https://github.com/darkXmo/cal-rule#readme",
   "devDependencies": {
     "@commitlint/cli": "^17.0.3",
     "@commitlint/config-conventional": "^17.0.3",
