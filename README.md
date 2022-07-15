@@ -15,7 +15,7 @@ operator `&` `|` `!` `()` are supported.
 ## install
 
 ```bash
-npm install judge
+npm install cal-rule
 ```
 
 ## usage
@@ -23,7 +23,7 @@ npm install judge
 ### init
 
 ```javascript
-import { init } from 'judge';
+import { init } from 'cal-rule';
 
 const ruleStr = '1A&2B';
 
