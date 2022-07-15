@@ -1,7 +1,8 @@
 import config from './config';
 
 const regex = /\d+[A-Z]?/g;
-const operatorRegex = /^(\(|\)|\||&|!)*$/;
+const operatorRegex = /^[()|&!]*$/;
+const acceptableRegex = /^([()|&!]|(true)|(false))*$/;
 
 export class CalRuleInValidError extends Error {
   static readonly warning = (str: string) =>
@@ -18,8 +19,28 @@ export class CalRuleInValidError extends Error {
 
 export class CalRuleRequiredError extends Error {
   static readonly error = (str: string) => `[cal-rule]: ${str} is required`;
-  constructor(rule: CalRule) {
-    super(CalRuleRequiredError.error(rule.choices ? 'values' : 'choices'));
+  constructor(type: string);
+  constructor(rule: CalRule);
+  constructor(arg: string | CalRule) {
+    if (typeof arg === 'string') {
+      super(CalRuleRequiredError.error(arg));
+    } else {
+      if (!arg.choices) {
+        super(CalRuleRequiredError.error('choices'));
+      } else if (!arg.values) {
+        super(CalRuleRequiredError.error('values'));
+      } else if (!arg.calculator) {
+        super(CalRuleRequiredError.error('calculator'));
+      }
+    }
+  }
+}
+
+export class CalRuleXssError extends Error {
+  constructor() {
+    super(
+      '[CALRULE WARNING!]: It seems like CalRule has been injected an unaccepted rule, There may be insecure codes that has been executed and could lead to XSS attack. please commit your issue to https://github.com/darkXmo/cal-rule'
+    );
   }
 }
 
@@ -36,7 +57,34 @@ export const ChoiceMissingWarning = (position: number[], ruleItem: string, rule:
   );
 };
 
-class CalRule {
+export const defaultCalculator = <Choice = any, Value = Choice>(
+  value: Value | undefined,
+  choice: Choice | undefined
+): boolean => {
+  if (typeof value === 'undefined' || value === null) {
+    return false;
+  }
+  if (typeof choice !== 'undefined') {
+    if (typeof value === typeof choice) {
+      return (value as unknown) === (choice as unknown);
+    }
+    if (value instanceof Array) {
+      return value.includes(choice);
+    } else {
+      console.warn(
+        'Default calculator cannot handle this type of value and choice, please define your own calculator by calRule.calculator'
+      );
+      throw new CalRuleRequiredError('calculator');
+    }
+  } else {
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+    return true;
+  }
+};
+
+class CalRule<Choice = any, Value = Choice> {
   readonly rule: string;
   private readonly ruleArr: string[];
   private readonly checkIndex: [number, number][];
@@ -61,17 +109,10 @@ class CalRule {
     this.combine(new Array(this.checkIndex.length).fill(true));
   }
 
-  choices!: (string[] | undefined)[];
-  values!: (string | undefined)[];
+  choices!: (Choice[] | undefined)[];
+  values!: (Value | undefined)[];
 
-  calculator = (value: typeof this.values[0], choice: typeof this.values[0]) => {
-    if (typeof choice !== 'undefined') {
-      return value === choice;
-    } else {
-      if (typeof value !== 'undefined') return value.trim().length > 0;
-    }
-    return false;
-  };
+  calculator!: (value: Value | undefined, choice: Choice | undefined) => boolean;
 
   private combine = (checkedArr: boolean[]) => {
     let str = '';
@@ -79,24 +120,28 @@ class CalRule {
       str += ele;
       str += checkedArr[index] ?? '';
     });
+    if (!acceptableRegex.test(str)) {
+      throw new CalRuleXssError();
+    }
     try {
       const ans = Function(`return ${str};`)();
       if (typeof ans !== 'number') {
-        throw new Error();
+        throw new CalRuleXssError();
       }
       return !!ans;
-    } catch {
-      throw new CalRuleInValidError(this);
+    } catch (err) {
+      if (err instanceof CalRuleXssError) {
+        throw err;
+      } else {
+        throw new CalRuleInValidError(this);
+      }
     }
   };
 
   parse(
-    calculator: (value: string | undefined, choice: string | undefined) => boolean = this.calculator
+    calculator: (value: Value | undefined, choice: Choice | undefined) => boolean = this.calculator
   ) {
-    if (!this.choices) {
-      throw new CalRuleRequiredError(this);
-    }
-    if (!this.values) {
+    if (!this.choices || !this.values || !this.calculator) {
       throw new CalRuleRequiredError(this);
     }
     const checkedArr = this.checkIndex.map((item, index) => {
@@ -119,8 +164,10 @@ class CalRule {
     return this.combine(checkedArr);
   }
 }
-export const init = (rule: string) => {
-  return new CalRule(rule);
+export const init = <Choice = any, Value = Choice>(rule: string) => {
+  const ans = new CalRule<Choice, Value>(rule);
+  ans.calculator = defaultCalculator;
+  return ans;
 };
 
 export default CalRule;
