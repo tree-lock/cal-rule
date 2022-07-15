@@ -67,19 +67,19 @@ export async function publish() {
       ]);
       console.log(`.env, package.json 的版本号已更新为${version}`);
     }
-    // 判断是否是`master`分支，如果是，执行发布，否则拒绝发布并提示只能在`master`分支上执行发布操作
+    // 判断是否是`main`分支，如果是，执行发布，否则拒绝发布并提示只能在`main`分支上执行发布操作
     const branch = (await execPromise('git rev-parse --abbrev-ref HEAD')).stdout.trim();
-    if (branch === 'master') {
+    if (branch === 'main') {
       return npmPublish(version);
     } else {
       console.log(
-        `当前分支为${chalk.yellow(branch)}, 请在${chalk.greenBright('master')}分支上执行发布操作`
+        `当前分支为${chalk.yellow(branch)}, 请在${chalk.greenBright('main')}分支上执行发布操作`
       );
       const answers = await inquirer.prompt([
         {
           type: 'confirm',
           name: 'switch',
-          message: `是否进行自动跳转到master分支并进行版本合并当前分支？`,
+          message: `是否进行自动跳转到main分支并进行版本合并当前分支？`,
           default: false
         }
       ]);
@@ -90,7 +90,7 @@ export async function publish() {
           stdio: 'inherit',
           shell: true
         });
-        spawnSync('git switch master', { stdio: 'inherit', shell: true });
+        spawnSync('git switch main', { stdio: 'inherit', shell: true });
         spawnSync('git merge develop', { stdio: 'inherit', shell: true });
         if (!version.includes('beta')) {
           spawnSync(`git tag v${version}`, { stdio: 'inherit', shell: true });
