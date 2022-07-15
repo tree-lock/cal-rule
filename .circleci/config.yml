@@ -28,7 +28,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run:
           name: Run tests
-          command: npm test
+          command: npm test:cov
       - codecov/upload
 
 workflows:
