@@ -125,7 +125,7 @@ class CalRule<Choice = any, Value = Choice> {
     }
     try {
       const ans = Function(`return ${str};`)();
-      if (typeof ans !== 'number') {
+      if (typeof ans !== 'number' && !['true', 'false'].includes(str)) {
         throw new CalRuleXssError();
       }
       return !!ans;

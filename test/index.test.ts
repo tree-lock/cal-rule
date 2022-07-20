@@ -144,6 +144,32 @@ describe('', () => {
     });
   });
 
+  describe('1A', () => {
+    const rule = init('1A');
+    const choices = [
+      ['A', 'B', 'C', 'D'],
+      ['A', 'B', 'C', 'D'],
+      ['A', 'B', 'C', 'D'],
+      ['A', 'B', 'C', 'D']
+    ];
+    rule.choices = choices;
+    test('true', () => {
+      const values = [['A'], 'B', 'C', 'D'];
+      rule.values = values;
+      expect(rule.parse()).toBe(true);
+    });
+    test('false', () => {
+      const values = [['B'], 'B', 'C', 'D'];
+      rule.values = values;
+      expect(rule.parse()).toBe(false);
+    });
+    test('false <case: value undefined>', () => {
+      const values = [undefined, 'B', 'C', 'D'];
+      rule.values = values;
+      expect(rule.parse()).toBe(false);
+    });
+  });
+
   describe('Warning', () => {
     const rule = init('1A&2B');
     it('unexpected undefined', () => {
