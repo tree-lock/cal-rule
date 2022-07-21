@@ -2,8 +2,8 @@
 
 [![LICENSE](https://img.shields.io/npm/l/cal-rule.svg?sanitize=true)](https://github.com/darkXmo/cal-rule/blob/main/LICENSE)
 [![NPM version](https://img.shields.io/npm/v/cal-rule.svg?style=flat)](https://npmjs.com/package/cal-rule)
-[![CircleCI](https://circleci.com/gh/darkXmo/cal-rule/tree/circleci-project-setup.svg?style=shield)](https://circleci.com/gh/darkXmo/cal-rule/tree/circleci-project-setup)
-[![Codecov](https://badgen.net/codecov/c/github/darkXmo/cal-rule/circleci-project-setup)](https://app.codecov.io/gh/darkXmo/cal-rule)
+[![CircleCI](https://circleci.com/gh/darkXmo/cal-rule.svg?style=shield)](https://circleci.com/gh/darkXmo/cal-rule)
+[![Codecov](https://badgen.net/codecov/c/github/darkXmo/cal-rule)](https://app.codecov.io/gh/darkXmo/cal-rule)
 [![install size](https://badgen.net/packagephobia/install/cal-rule)](https://packagephobia.now.sh/result?p=cal-rule)
 
 A simple javascript/typescript calculating rule solution.
