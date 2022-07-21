@@ -1,8 +1,12 @@
-import config from './config';
+import versionConfig from './config';
 
 const regex = /\d+[A-Z]?/g;
 const operatorRegex = /^[()|&!]*$/;
 const acceptableRegex = /^([()|&!]|(true)|(false))*$/;
+
+export const config = {
+  warning: true
+};
 
 export class CalRuleInValidError extends Error {
   static readonly warning = (str: string) =>
@@ -12,7 +16,9 @@ export class CalRuleInValidError extends Error {
 
   constructor(rule: CalRule) {
     const str = rule.rule;
-    console.warn(CalRuleInValidError.warning(str));
+    if (config.warning) {
+      console.warn(CalRuleInValidError.warning(str));
+    }
     super(CalRuleInValidError.error(str));
   }
 }
@@ -46,15 +52,17 @@ export class CalRuleXssError extends Error {
 
 /** There will be a warning out, if choice(s) at `position` is required but not provided */
 export const ChoiceMissingWarning = (position: number[], ruleItem: string, rule: CalRule) => {
-  console.warn(
-    `[cal-rule]: ${rule.rule} require choice${
-      position.length === 1 ? 's' : ''
-    } for position ${position
-      .map((i) => `[${i}]`)
-      .join(
-        ''
-      )}, but undefined is provided; Since this reason, rule '${ruleItem}' will always return false`
-  );
+  if (config.warning) {
+    console.warn(
+      `[cal-rule]: ${rule.rule} require choice${
+        position.length === 1 ? 's' : ''
+      } for position ${position
+        .map((i) => `[${i}]`)
+        .join(
+          ''
+        )}, but undefined is provided; Since this reason, rule '${ruleItem}' will always return false`
+    );
+  }
 };
 
 export const defaultCalculator = <Choice = any, Value = Choice>(
@@ -71,9 +79,11 @@ export const defaultCalculator = <Choice = any, Value = Choice>(
     if (value instanceof Array) {
       return value.includes(choice);
     } else {
-      console.warn(
-        'Default calculator cannot handle this type of value and choice, please define your own calculator by calRule.calculator'
-      );
+      if (config.warning) {
+        console.warn(
+          'Default calculator cannot handle this type of value and choice, please define your own calculator by calRule.calculator'
+        );
+      }
       throw new CalRuleRequiredError('calculator');
     }
   } else {
@@ -172,4 +182,4 @@ export const init = <Choice = any, Value = Choice>(rule: string) => {
 
 export default CalRule;
 
-export const version = config.version;
+export const version = versionConfig.version;

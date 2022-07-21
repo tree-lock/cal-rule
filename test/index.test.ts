@@ -2,6 +2,7 @@ import CalRule, {
   CalRuleInValidError,
   CalRuleRequiredError,
   CalRuleXssError,
+  config,
   init
 } from '../src/index';
 describe('', () => {
@@ -18,12 +19,32 @@ describe('', () => {
       const rule = '108*23';
       console.warn = jest.fn();
       expect(() => init(rule)).toThrowError(CalRuleInValidError);
+      expect(console.warn).toBeCalled();
+    });
+
+    it('warning closed', () => {
+      const rule = '108*23';
+      console.warn = jest.fn();
+      config.warning = false;
+      expect(() => init(rule)).toThrowError(CalRuleInValidError);
+      expect(console.warn).not.toBeCalled();
+      config.warning = true;
     });
 
     it('Unvalid rule <case: parse failed>', () => {
       const rule = '1A&2B)';
       console.warn = jest.fn();
       expect(() => init(rule)).toThrowError(CalRuleInValidError);
+      expect(console.warn).toBeCalled();
+    });
+
+    it('warning closed', () => {
+      const rule = '1A&2B)';
+      console.warn = jest.fn();
+      config.warning = false;
+      expect(() => init(rule)).toThrowError(CalRuleInValidError);
+      expect(console.warn).not.toBeCalled();
+      config.warning = true;
     });
 
     it('Both Missing', () => {
@@ -187,6 +208,14 @@ describe('', () => {
       );
     });
 
+    it('warning closed', () => {
+      console.warn = jest.fn();
+      config.warning = false;
+      expect(rule.parse()).toBe(false);
+      expect(console.warn).not.toBeCalled();
+      config.warning = true;
+    });
+
     it('unexpected [undefined]', () => {
       console.warn = jest.fn();
       const choices = [
@@ -204,6 +233,14 @@ describe('', () => {
       expect(console.warn).toHaveBeenCalledWith(
         `[cal-rule]: ${rule.rule} require choice for position [1][1], but undefined is provided; Since this reason, rule '2B' will always return false`
       );
+    });
+
+    it('warning closed', () => {
+      console.warn = jest.fn();
+      config.warning = false;
+      expect(rule.parse()).toBe(false);
+      expect(console.warn).not.toBeCalled();
+      config.warning = true;
     });
   });
 
@@ -356,6 +393,13 @@ describe('', () => {
         rule.values = values;
         console.warn = jest.fn();
         expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
+        expect(console.warn).toBeCalled();
+      });
+      it('warning closed', () => {
+        console.warn = jest.fn();
+        config.warning = false;
+        expect(console.warn).not.toBeCalled();
+        config.warning = true;
       });
       describe('custom calculator', () => {
         it('define calculator', () => {

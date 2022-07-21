@@ -13,7 +13,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "ci": "npm run lint && npm run build",
-    "release": "gulp"
+    "release": "npm run build && gulp"
   },
   "files": [
     "dist"
