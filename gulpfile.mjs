@@ -16,6 +16,21 @@ const npmPublish = (version) => {
 };
 
 export async function publish() {
+  // 判断是否是`main`分支，如果是，执行发布，否则拒绝发布并提示只能在`main`分支上执行发布操作
+  const branch = (await execPromise('git rev-parse --abbrev-ref HEAD')).stdout.trim();
+  if (branch === 'main') {
+    const branchError = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'confirm',
+        message: `确认直接在${chalk.redBright('main')}分支进行发布吗？`,
+        default: false
+      }
+    ]);
+    if (!branchError.confirm) {
+      return;
+    }
+  }
   // 是否已构建
   if (!fs.existsSync('./dist')) {
     console.log(`请先进行构建, ${chalk.cyan('npm run build')}`);
@@ -67,13 +82,11 @@ export async function publish() {
       ]);
       console.log(`.env, package.json 的版本号已更新为${version}`);
     }
-    // 判断是否是`main`分支，如果是，执行发布，否则拒绝发布并提示只能在`main`分支上执行发布操作
-    const branch = (await execPromise('git rev-parse --abbrev-ref HEAD')).stdout.trim();
     if (branch === 'main') {
       return npmPublish(version);
     } else {
       console.log(
-        `当前分支为${chalk.yellow(branch)}, 请在${chalk.greenBright('main')}分支上执行发布操作`
+        `当前分支为${chalk.yellow(branch)}, 将在${chalk.greenBright('main')}分支上执行发布操作`
       );
       const answers = await inquirer.prompt([
         {
