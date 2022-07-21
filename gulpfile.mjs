@@ -21,7 +21,7 @@ export async function publish() {
   if (branch === 'main') {
     const branchError = await inquirer.prompt([
       {
-        type: 'input',
+        type: 'confirm',
         name: 'confirm',
         message: `确认直接在${chalk.redBright('main')}分支进行发布吗？`,
         default: false
