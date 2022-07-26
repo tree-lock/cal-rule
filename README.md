@@ -16,12 +16,23 @@ operator `&` `|` `!` `()` are supported.
 
 > - `1A` means choose the first item of first choice;
 > - `1` means first value is valid;
+> - `1B&2A` means choose second option of first question **and** first options of second question.
+> - `1B|2A` means choose second option of first question **or** first options of second question.
+> - `!` means reverse, if `1A` parsed to true, `!1A` will parsed to false.
 > - You can customize your own strategy as well;
 
 ## install
 
 ```bash
 npm install cal-rule
+```
+
+```bash
+yarn add cal-rule
+```
+
+```bash
+pnpm add cal-rule
 ```
 
 ## usage
@@ -36,17 +47,17 @@ const ruleStr = '1A&2B';
 const rule = init(ruleStr);
 ```
 
-while using typescript, you can also appoint the value type of `rule`.
+While using typescript, you can also appoint the value type of `rule`.
 
 ```typescript
 const rule = init<string>(ruleStr);
 ```
 
-if `ruleStr` is invalid, `init` will return `undefined`;
+if `ruleStr` is invalid, `init` will throw a `Error`;
 
 ### choices & values & parse
 
-pass the value to rule, parse the
+`cal-rule` requires choices and values to calculate, `choices[0][0]` will be considered as `1A`.
 
 ```typescript
 const rule = init(ruleStr);
@@ -59,7 +70,7 @@ const choices = [
 
 const values = ['option1A', 'option2B', undefined];
 
-// since the ruleStr only infer to the value of position [0] and [1], choices[2] and values[2] will be passed but ignored.
+// since the ruleStr only infer to the value of position [0] and [1], choices[2] and values[2] will be ignored.
 rule.choices = choices;
 rule.values = values;
 
@@ -112,27 +123,48 @@ The second param `choice` is defined by ruleStr and choices. `1A` means `choices
 
 In `1A&2B` case:
 
-| serial | value                            | choice       | rule    | ans             |
-| ------ | -------------------------------- | ------------ | ------- | --------------- |
-| 0      | `'option1A; option1B; option1C'` | `'option1A'` | `1A`    | true            |
-| 1      | `'option2B; option2D'`           | `'option2B'` | `2B`    | true            |
-| 2      | values                           | choices      | `1A&2B` | ans[0] & ans[1] |
+| serial | value                            | choice       | rule    | ans                      |
+| ------ | -------------------------------- | ------------ | ------- | ------------------------ |
+| 0      | `'option1A; option1B; option1C'` | `'option1A'` | `1A`    | true                     |
+| 1      | `'option2B; option2D'`           | `'option2B'` | `2B`    | true                     |
+| 2      | values                           | choices      | `1A&2B` | ans[0] & ans[1] === true |
 
 Default function pass to parse ↓
 
 ```typescript
-(value, choice) => {
-  if (choice) {
-    return value === choice;
+const defaultCalculator = <Choice = any, Value = Choice>(
+  value: Value | undefined,
+  choice: Choice | undefined
+): boolean => {
+  if (typeof value === 'undefined' || value === null) {
+    return false;
+  }
+  if (typeof choice !== 'undefined') {
+    if (typeof value === typeof choice) {
+      return (value as unknown) === (choice as unknown);
+    }
+    if (value instanceof Array) {
+      return value.includes(choice);
+    } else {
+      if (config.warning) {
+        console.warn(
+          'Default calculator cannot handle this type of value and choice, please define your own calculator by calRule.calculator'
+        );
+      }
+      throw new CalRuleRequiredError('calculator');
+    }
   } else {
-    return value.trim().length > 0;
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+    return true;
   }
 };
 ```
 
 ### calculator
 
-`cal-rule` allows developer to customize the default calculating function on parse.
+`cal-rule` allows developer to customize the default calculator.
 
 ```typescript
 rule.calculator = (value, choice): boolean => {
