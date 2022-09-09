@@ -11,7 +11,7 @@
   "endOfLine": "auto",
   "overrides": [
     {
-      "files": "config.*",
+      "files": "version-config.*",
       "options": {
         "singleQuote": false,
         "trailingComma": "none",

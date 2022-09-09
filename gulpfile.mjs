@@ -53,8 +53,8 @@ const checkVersion = async (oldVersion) => {
     const [H, N, S] = oldVersion.split('.').map((item) => Number(item));
     const B = '-beta.0';
     const small = `${H}.${N}.${S + 1}${B}`;
-    const normal = `${H}.${N + 1}.${S}${B}`;
-    const huge = `${H + 1}.${N}.${S}${B}`;
+    const normal = `${H}.${N + 1}.0${B}`;
+    const huge = `${H + 1}.0.0${B}`;
     const { option } = await inquirer.prompt([
       {
         type: 'list',
@@ -82,7 +82,9 @@ const checkVersion = async (oldVersion) => {
 
 async function changeVersion(version) {
   const packageFile = await fs.readJSON('./package.json');
-  const configFileStr = (await fs.readFile('./src/version-config.ts', 'utf-8'))
+  const versionFilePath = './src/version-config.ts';
+  const configFileStr = (await fs.readFile(versionFilePath, 'utf-8'))
+    .replace('/** 请勿手动修改本文件，本文件通过命令行自动生成 */\n*', '')
     .replace('export default ', '')
     .replace(/\/\*\*.*\*\/\n*/g, '');
   const configFile = JSON.parse(configFileStr);
@@ -93,7 +95,7 @@ async function changeVersion(version) {
       spaces: 2
     }),
     fs.writeFile(
-      './src/config.ts',
+      versionFilePath,
       `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
         configFile,
         null,
@@ -101,7 +103,7 @@ async function changeVersion(version) {
       )}`
     ),
     fs.writeFile(
-      './dist/config.js',
+      './dist/version-config.js',
       `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
         configFile,
         null,
