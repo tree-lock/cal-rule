@@ -7,30 +7,112 @@ const execPromise = util.promisify(exec);
 
 const npmPublish = (version) => {
   if (version.includes('beta')) {
-    return spawnSync('npm publish --tag beta', {
+    const command = 'npm publish --tag beta';
+    console.log(command);
+    return spawnSync(command, {
       stdio: 'inherit',
       shell: true
     });
   }
-  return spawnSync('npm publish', { stdio: 'inherit', shell: true });
+  const command = 'npm publish';
+  console.log(command);
+  return spawnSync(command, { stdio: 'inherit', shell: true });
 };
 
-export async function publish() {
-  // 判断是否是`main`分支，如果是，执行发布，否则拒绝发布并提示只能在`main`分支上执行发布操作
-  const branch = (await execPromise('git rev-parse --abbrev-ref HEAD')).stdout.trim();
-  if (branch === 'main') {
-    const branchError = await inquirer.prompt([
+/**
+ * @param {string} oldVersion
+ * @returns {Promise<string>}
+ */
+const checkVersion = async (oldVersion) => {
+  if (oldVersion.includes('beta')) {
+    const V = oldVersion.split('-beta.')[0];
+    const B = Number(oldVersion.split('-beta.')[1]);
+    const update = `${V}-beta.${B + 1}`;
+    const publish = `${V}`;
+    const { option } = await inquirer.prompt([
       {
-        type: 'confirm',
-        name: 'confirm',
-        message: `确认直接在${chalk.redBright('main')}分支进行发布吗？`,
-        default: false
+        type: 'list',
+        name: 'option',
+        message: `当前版本为${oldVersion ?? '未定义'}，请选择更新级别`,
+        choices: [
+          { value: 'update', name: `更新当前测试(${update})` },
+          { value: 'publish', name: `结束当前测试(${publish})` },
+          { value: 'old', name: `不变更版本号(${oldVersion})` }
+        ],
+        default: 'update'
       }
     ]);
-    if (!branchError.confirm) {
-      return;
+    if (option === 'update') {
+      return update;
+    } else if (option === 'publish') {
+      return publish;
+    } else {
+      return oldVersion;
+    }
+  } else {
+    const [H, N, S] = oldVersion.split('.').map((item) => Number(item));
+    const B = '-beta.0';
+    const small = `${H}.${N}.${S + 1}${B}`;
+    const normal = `${H}.${N + 1}.${S}${B}`;
+    const huge = `${H + 1}.${N}.${S}${B}`;
+    const { option } = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'option',
+        message: `当前版本为${oldVersion ?? '未定义'}，请选择更新级别`,
+        choices: [
+          { value: 'small', name: `小版本测试(${small})` },
+          { value: 'normal', name: `普通版本测试(${normal})` },
+          { value: 'huge', name: `大版本测试(${huge})` },
+          { value: 'old', name: `不变更版本号(${oldVersion})` }
+        ]
+      }
+    ]);
+    if (option === 'small') {
+      return small;
+    } else if (option === 'normal') {
+      return normal;
+    } else if (option === 'huge') {
+      return huge;
+    } else {
+      return oldVersion;
     }
   }
+};
+
+async function changeVersion(version) {
+  const packageFile = await fs.readJSON('./package.json');
+  const configFileStr = (await fs.readFile('./src/version-config.ts', 'utf-8'))
+    .replace('export default ', '')
+    .replace(/\/\*\*.*\*\/\n*/g, '');
+  const configFile = JSON.parse(configFileStr);
+  packageFile.version = version;
+  configFile.version = version;
+  await Promise.all([
+    fs.writeJSON('./package.json', packageFile, {
+      spaces: 2
+    }),
+    fs.writeFile(
+      './src/config.ts',
+      `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
+        configFile,
+        null,
+        2
+      )}`
+    ),
+    fs.writeFile(
+      './dist/config.js',
+      `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
+        configFile,
+        null,
+        2
+      )}`
+    )
+  ]);
+  console.log(`.env, package.json 的版本号已更新为${version}`);
+}
+
+export async function publish() {
   // 是否已构建
   if (!fs.existsSync('./dist')) {
     console.log(`请先进行构建, ${chalk.cyan('npm run build')}`);
@@ -40,91 +122,37 @@ export async function publish() {
   const packageFile = await fs.readJSON('./package.json');
   /** @type { string } */
   let version = packageFile.version;
-  const answers = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'version',
-      message: `请输入版本号，当前版本为${version ?? '未定义'}\n`,
-      default: version
+  const oldVersion = packageFile.version;
+  const checkedVersion = await checkVersion(version);
+  if (checkedVersion) {
+    if (version !== checkedVersion) {
+      version = checkedVersion;
+      await changeVersion(version);
     }
-  ]);
-  if (answers.version) {
-    // 修改文件版本
-    if (version !== answers.version) {
-      version = answers.version;
-      const packageFile = await fs.readJSON('./package.json');
-      const configFileStr = (await fs.readFile('./src/version-config.ts', 'utf-8'))
-        .replace('export default ', '')
-        .replace(/\/\*\*.*\*\/\n/g, '');
-      const configFile = JSON.parse(configFileStr);
-      packageFile.version = version;
-      configFile.version = version;
-      await Promise.all([
-        fs.writeJSON('./package.json', packageFile, {
-          spaces: 2
-        }),
-        fs.writeFile(
-          './src/config.ts',
-          `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
-            configFile,
-            null,
-            2
-          )}`
-        ),
-        fs.writeFile(
-          './dist/config.js',
-          `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
-            configFile,
-            null,
-            2
-          )}`
-        )
-      ]);
-      console.log(`.env, package.json 的版本号已更新为${version}`);
-    }
-    if (branch === 'main') {
-      return npmPublish(version);
+    const branch = (await execPromise('git rev-parse --abbrev-ref HEAD')).stdout.trim();
+    if (branch === 'master') {
+      // 判断是否是`master`分支，如果是，允许任意版本发布
+      npmPublish(version);
+      spawnSync(`git add . && git commit -m "build: release v${version}"`, {
+        stdio: 'inherit',
+        shell: true
+      });
+      if (!version.includes('beta')) {
+        spawnSync(`git tag v${version}`, { stdio: 'inherit', shell: true });
+        spawnSync(`git push origin --tags`, { stdio: 'inherit', shell: true });
+      }
+      return;
     } else {
-      console.log(
-        `当前分支为${chalk.yellow(branch)}, 将在${chalk.greenBright('main')}分支上执行发布操作`
-      );
-      const answers = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'switch',
-          message: `是否进行自动跳转到main分支并进行版本合并当前分支？`,
-          default: false
-        }
-      ]);
-      if (!answers.switch) {
-        return;
+      // beta版本
+      if (!version.includes('beta')) {
+        console.log(`当前分支为${chalk.yellow(branch)}, 非master分支只允许发布beta版本`);
+        return await changeVersion(oldVersion);
       } else {
-        spawnSync(`git add . && git commit -m "build: release v${version}"`, {
+        npmPublish(version);
+        return spawnSync(`git add . && git commit -m "build: release v${version}"`, {
           stdio: 'inherit',
           shell: true
         });
-        spawnSync('git switch main', { stdio: 'inherit', shell: true });
-        spawnSync('git merge develop', { stdio: 'inherit', shell: true });
-        if (!version.includes('beta')) {
-          spawnSync(`git tag v${version}`, { stdio: 'inherit', shell: true });
-          spawnSync(`git push origin --tags`, { stdio: 'inherit', shell: true });
-          spawnSync(`git push company --tags`, { stdio: 'inherit', shell: true });
-        }
-        npmPublish(version);
-        spawnSync('git switch develop', { stdio: 'inherit', shell: true });
-        const answers = await inquirer.prompt([
-          {
-            type: 'confirm',
-            name: 'push',
-            message: `是否将修改push到gitlab和github`,
-            default: true
-          }
-        ]);
-        if (answers.push) {
-          spawnSync('git push --all', { stdio: 'inherit', shell: true });
-          spawnSync('git push company develop:develop', { stdio: 'inherit', shell: true });
-          return spawnSync('git push company main:master', { stdio: 'inherit', shell: true });
-        }
       }
     }
   }

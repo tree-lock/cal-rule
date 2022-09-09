@@ -1,3 +1,4 @@
+import { Options } from 'prettier';
 import { config } from './config';
 import {
   CalRuleInValidError,
@@ -53,8 +54,8 @@ export const defaultCalculator = <Choice = any, Value = Choice>(
       } else if (value instanceof Array) {
         return (
           value.findIndex((item) => {
-            return excludes.includes(item);
-          }) === -1
+            return !excludes.includes(item);
+          }) > -1
         );
       }
     }
@@ -183,10 +184,19 @@ class CalRule<Choice = any, Value = Choice> {
     return this.combine(checkedArr);
   }
 }
-export const init = <Choice = any, Value = Choice>(rule: string, other = false) => {
+export const init = <Choice = any, Value = Choice>(
+  rule: string,
+  options?: {
+    other?: true;
+  }
+) => {
   const ans = new CalRule<Choice, Value>(rule);
   ans.calculator = defaultCalculator;
-  ans.other = other;
+  if (options) {
+    (Object.keys(options) as (keyof typeof options)[]).forEach((option) => {
+      ans[option] = true;
+    });
+  }
   return ans;
 };
 
