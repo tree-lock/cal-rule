@@ -53,7 +53,7 @@ export async function publish() {
     if (version !== answers.version) {
       version = answers.version;
       const packageFile = await fs.readJSON('./package.json');
-      const configFileStr = (await fs.readFile('./src/config.ts', 'utf-8'))
+      const configFileStr = (await fs.readFile('./src/version-config.ts', 'utf-8'))
         .replace('export default ', '')
         .replace(/\/\*\*.*\*\/\n/g, '');
       const configFile = JSON.parse(configFileStr);

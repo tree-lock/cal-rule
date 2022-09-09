@@ -1,81 +1,41 @@
-import versionConfig from './config';
+import { config } from './config';
+import {
+  CalRuleInValidError,
+  CalRuleRequiredError,
+  CalRuleXssError,
+  ChoiceMissingWarning
+} from './error';
+import versionConfig from './version-config';
 
 const regex = /\d+[A-Z]?/g;
 const operatorRegex = /^[()|&!]*$/;
 const acceptableRegex = /^([()|&!]|(true)|(false))*$/;
 
-export const config = {
-  warning: true
-};
-
-export class CalRuleInValidError extends Error {
-  static readonly warning = (str: string) =>
-    `If you regard rule '${str}' as a valid rule, please commit your problem on https://github.com/darkXmo/cal-rule/issues`;
-
-  static readonly error = (str: string) => `[cal-rule]: inValid rule '${str}'`;
-
-  constructor(rule: CalRule) {
-    const str = rule.rule;
-    if (config.warning) {
-      console.warn(CalRuleInValidError.warning(str));
-    }
-    super(CalRuleInValidError.error(str));
-  }
-}
-
-export class CalRuleRequiredError extends Error {
-  static readonly error = (str: string) => `[cal-rule]: ${str} is required`;
-  constructor(type: string);
-  constructor(rule: CalRule);
-  constructor(arg: string | CalRule) {
-    if (typeof arg === 'string') {
-      super(CalRuleRequiredError.error(arg));
-    } else {
-      if (!arg.choices) {
-        super(CalRuleRequiredError.error('choices'));
-      } else if (!arg.values) {
-        super(CalRuleRequiredError.error('values'));
-      } else if (!arg.calculator) {
-        super(CalRuleRequiredError.error('calculator'));
-      }
-    }
-  }
-}
-
-export class CalRuleXssError extends Error {
-  constructor() {
-    super(
-      '[CALRULE WARNING!]: It seems like CalRule has been injected an unaccepted rule, There may be insecure codes that has been executed and could lead to XSS attack. please commit your issue to https://github.com/darkXmo/cal-rule'
-    );
-  }
-}
-
-/** There will be a warning out, if choice(s) at `position` is required but not provided */
-export const ChoiceMissingWarning = (position: number[], ruleItem: string, rule: CalRule) => {
-  if (config.warning) {
-    console.warn(
-      `[cal-rule]: ${rule.rule} require choice${
-        position.length === 1 ? 's' : ''
-      } for position ${position
-        .map((i) => `[${i}]`)
-        .join(
-          ''
-        )}, but undefined is provided; Since this reason, rule '${ruleItem}' will always return false`
-    );
-  }
-};
-
 export const defaultCalculator = <Choice = any, Value = Choice>(
   value: Value | undefined,
-  choice: Choice | undefined
+  choice: Choice | undefined,
+  /** useful only when set `other` true and choice is undefined */
+  excludes?: Choice[]
 ): boolean => {
+  if (typeof value === 'string' && value.length === 0) {
+    if (typeof choice === 'string' && choice === '') return true;
+    else return false;
+  }
+  if (value instanceof Array && value.length === 0) {
+    if (choice instanceof Array && choice.length === 0) return true;
+    else return false;
+  }
   if (typeof value === 'undefined' || value === null) {
+    // value empty
     return false;
   }
+  // select
   if (typeof choice !== 'undefined') {
+    // single-select
     if (typeof value === typeof choice) {
       return (value as unknown) === (choice as unknown);
     }
+    // multi-select
     if (value instanceof Array) {
       return value.includes(choice);
     } else {
@@ -87,8 +47,21 @@ export const defaultCalculator = <Choice = any, Value = Choice>(
       throw new CalRuleRequiredError('calculator');
     }
   } else {
+    if (typeof excludes !== 'undefined') {
+      if (typeof value === 'string') {
+        return value.trim().length > 0 && !(excludes as unknown[]).includes(value);
+      } else if (value instanceof Array) {
+        return (
+          value.findIndex((item) => {
+            return excludes.includes(item);
+          }) === -1
+        );
+      }
+    }
     if (typeof value === 'string') {
       return value.trim().length > 0;
+    } else if (typeof value === 'number') {
+      return !isNaN(value);
     }
     return true;
   }
@@ -121,8 +94,33 @@ class CalRule<Choice = any, Value = Choice> {
 
   choices!: (Choice[] | undefined)[];
   values!: (Value | undefined)[];
+  /**
+   * If required choice at `choices[x].length` position missing while `other` option set true,
+   * regard it as a checking other option situation;
+   *
+   * For example,
+   *
+   * ```typescript
+   * const calRule = init('1E');
+   * calRule.choices = ['A', 'B', 'C', 'D'];
+   * calRule.values = ['some other value'];
+   * ```
+   *
+   * if `calRule.other` is set `false`, it will throw a `ChoiceMissingWarning` with `false` value return;
+   *
+   * `calRule.other` set `true`, `true` will be returned since `1E` is regarded as checking extra option
+   * and `values[0]` meets by it not matching any value among choices;
+   *
+   * However, if the rule requiring 2 more items larger than length of choices (rule `1F` with choices `['A', 'B', 'C', 'D']`),
+   * it will always throw `ChoiceMissingWarning` and return `false` ;
+   * */
+  other = false;
 
-  calculator!: (value: Value | undefined, choice: Choice | undefined) => boolean;
+  calculator!: (
+    value: Value | undefined,
+    choice: Choice | undefined,
+    excludes?: Choice[]
+  ) => boolean;
 
   private combine = (checkedArr: boolean[]) => {
     let str = '';
@@ -149,22 +147,33 @@ class CalRule<Choice = any, Value = Choice> {
   };
 
   parse(
-    calculator: (value: Value | undefined, choice: Choice | undefined) => boolean = this.calculator
+    calculator: (
+      value: Value | undefined,
+      choice: Choice | undefined,
+      excludes?: Choice[]
+    ) => boolean = this.calculator
   ) {
     if (!this.choices || !this.values || !this.calculator) {
       throw new CalRuleRequiredError(this);
     }
     const checkedArr = this.checkIndex.map((item, index) => {
+      const value = this.values[item[0]];
       if (item[1] === -1) {
-        return calculator(this.values[item[0]], undefined);
+        // If item[1] === -1, it is a input field, choices should not be provided;
+        return calculator(value, undefined);
       } else {
         const choicesItem = this.choices[item[0]];
-        if (choicesItem) {
-          if (!choicesItem[item[1]]) {
+        // Check if choices exists
+        if (typeof choicesItem !== 'undefined') {
+          // Choice missing at the exact position
+          if (typeof choicesItem[item[1]] === 'undefined') {
+            if (this.other && choicesItem.length === item[1]) {
+              return calculator(value, undefined, choicesItem);
+            }
             ChoiceMissingWarning(item, this.ruleArr[index], this);
             return false;
           }
-          return calculator(this.values[item[0]], choicesItem[item[1]]);
+          return calculator(value, choicesItem[item[1]]);
         } else {
           ChoiceMissingWarning([item[0]], this.ruleArr[index], this);
           return false;
@@ -174,9 +183,10 @@ class CalRule<Choice = any, Value = Choice> {
     return this.combine(checkedArr);
   }
 }
-export const init = <Choice = any, Value = Choice>(rule: string) => {
+export const init = <Choice = any, Value = Choice>(rule: string, other = false) => {
   const ans = new CalRule<Choice, Value>(rule);
   ans.calculator = defaultCalculator;
+  ans.other = other;
   return ans;
 };
 

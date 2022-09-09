@@ -1,10 +1,7 @@
-import CalRule, {
-  CalRuleInValidError,
-  CalRuleRequiredError,
-  CalRuleXssError,
-  config,
-  init
-} from '../src/index';
+import CalRule, { init } from '../src/index';
+import { CalRuleRequiredError } from '../src/error';
+import { config } from '../src/config';
+
 describe('', () => {
   it('init', () => {
     const rule: CalRule = init('1A&2B');
@@ -12,64 +9,6 @@ describe('', () => {
     expect(rule.calculator).toBeDefined();
     expect(rule.choices).toBeUndefined();
     expect(rule.values).toBeUndefined();
-  });
-
-  describe('error', () => {
-    it('Unvalid rule <case: unexpected operator>', () => {
-      const rule = '108*23';
-      console.warn = jest.fn();
-      expect(() => init(rule)).toThrowError(CalRuleInValidError);
-      expect(console.warn).toBeCalled();
-    });
-
-    it('warning closed', () => {
-      const rule = '108*23';
-      console.warn = jest.fn();
-      config.warning = false;
-      expect(() => init(rule)).toThrowError(CalRuleInValidError);
-      expect(console.warn).not.toBeCalled();
-      config.warning = true;
-    });
-
-    it('Unvalid rule <case: parse failed>', () => {
-      const rule = '1A&2B)';
-      console.warn = jest.fn();
-      expect(() => init(rule)).toThrowError(CalRuleInValidError);
-      expect(console.warn).toBeCalled();
-    });
-
-    it('warning closed', () => {
-      const rule = '1A&2B)';
-      console.warn = jest.fn();
-      config.warning = false;
-      expect(() => init(rule)).toThrowError(CalRuleInValidError);
-      expect(console.warn).not.toBeCalled();
-      config.warning = true;
-    });
-
-    it('Both Missing', () => {
-      const rule: CalRule = init('1A&2B');
-      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
-    });
-
-    it('Missing choices', () => {
-      const rule: CalRule = init('1A&2B');
-      rule.values = [undefined, undefined, undefined];
-      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
-    });
-
-    it('Missing values', () => {
-      const rule: CalRule = init('1A&2B');
-      rule.choices = [undefined, undefined, undefined];
-      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
-    });
-
-    it('Missing calculator', () => {
-      const rule = new CalRule('1A&2B');
-      rule.choices = [undefined, undefined, undefined];
-      rule.values = [undefined, undefined, undefined];
-      expect(() => rule.parse()).toThrowError(CalRuleRequiredError);
-    });
   });
 
   describe('1A&2B', () => {
@@ -307,12 +246,12 @@ describe('', () => {
     const choices = new Array(6).fill(undefined);
     rule.choices = choices;
     it('string, number, Date, Array, Object, Symbol', () => {
-      const values = ['string', 213, new Date(), [], {}, Symbol(2)];
+      const values = ['string', 213, new Date(), [1], {}, Symbol(2)];
       rule.values = values;
       expect(rule.parse()).toBe(true);
     });
     it('undefined, number, Date, Array, Object, Symbol', () => {
-      const values = [undefined, 213, new Date(), [], {}, Symbol(2)];
+      const values = [undefined, 213, new Date(), [1], {}, Symbol(2)];
       rule.values = values;
       expect(rule.parse()).toBe(false);
     });
@@ -388,6 +327,7 @@ describe('', () => {
         ['A', 'B', 'C', 'D']
       ];
       it('default calculator', () => {
+        // default calculator cannot settle the choices
         const values = [{ A: 1, B: 2 }, { A: 1, B: 2, C: 3, D: 4 }, undefined, undefined];
         rule.choices = choices;
         rule.values = values;
@@ -427,21 +367,6 @@ describe('', () => {
           expect(rule.parse()).toBe(false);
         });
       });
-    });
-  });
-  describe('XSS attack', () => {
-    const rule = init('1&2');
-    const choices = [undefined, undefined];
-    const values = [1, 2];
-    rule.choices = choices;
-    rule.values = values;
-    it('Object.assign unexpected calArr', () => {
-      const obj = Object.assign(rule, { calArr: ['', '&(console.log(123)||true)&', ''] });
-      expect(() => (obj as unknown as CalRule).parse()).toThrowError(CalRuleXssError);
-    });
-    it('Object.assign unexpected calArr with "!!"', () => {
-      const obj = Object.assign(rule, { calArr: ['!!(', '&', ')'] });
-      expect(() => (obj as unknown as CalRule).parse()).toThrowError(CalRuleXssError);
     });
   });
 });
