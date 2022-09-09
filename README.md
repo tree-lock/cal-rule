@@ -175,6 +175,55 @@ rule.calculator = (value, choice): boolean => {
 };
 ```
 
+### other
+
+`cal-rule` can check extra choice that is not includes in choices but checked by rule.
+
+```typescript
+const rule: CalRule = init('1E');
+const choices = [['A', 'B', 'C', 'D']];
+it('other option', () => {
+  rule.choices = choices;
+  rule.values = ['other'];
+  // return false
+  rule.parse();
+});
+```
+
+`1E` infer to `choices[0][4]`, which does not exist, so `parse` should return a `false`.
+
+However, sometimes you may have **extra value** that is not included in choices
+
+```typescript
+const definedChoices = ['OptionA', 'OptionB', 'OptionC', 'OptionD'];
+const realChoices = ['OptionA', 'OptionB', 'OptionC', 'OptionD', 'Custom Input Value: Other'];
+
+rule.choices = definedChoices;
+```
+
+`cal-rule` can regard such **extra value** as a **other choice**.
+
+```typescript
+/** set config other true */
+const rule: CalRule = init('1E', {
+  other: true
+});
+const choices = [['A', 'B', 'C', 'D']];
+it('other option', () => {
+  rule.choices = choices;
+  rule.values = ['other'];
+  // return true
+  rule.parse();
+});
+```
+
+because of `1E` meaning `choices[0][4]` and `4 === choices[0].length + 1`, `cal-rule` will check if `value[0]` is a valid extra value.
+
+> inValid extra value: `''`, `NaN`, `undefined`, `null`, `[]`.
+
+> rule `1E` exactly responses to `choices[0].length + 1`;
+> in case of rule `1F`, will only works when `choices[0].length === 5`;
+
 ## Project Actives
 
 ![Alt](https://repobeats.axiom.co/api/embed/070ab5736ffbb0afce1a6c9ebe598032c60730a8.svg 'Repobeats analytics image')
