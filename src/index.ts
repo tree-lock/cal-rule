@@ -1,4 +1,3 @@
-import { Options } from 'prettier';
 import { config } from './config';
 import {
   CalRuleInValidError,
