@@ -3,7 +3,7 @@ import inquirer from 'inquirer';
 import util from 'util';
 import { exec, spawnSync } from 'child_process';
 import chalk from 'chalk';
-import Prettier from 'prettier';
+import { format } from 'prettier';
 const execPromise = util.promisify(exec);
 
 const npmPublish = (version) => {
@@ -92,7 +92,7 @@ async function changeVersion(version) {
   const configFile = JSON.parse(configFileStr);
   packageFile.version = version;
   configFile.version = version;
-  const str = Prettier.format(
+  const str = format(
     `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
       configFile,
       null,
@@ -101,7 +101,8 @@ async function changeVersion(version) {
     {
       'singleQuote': false,
       'trailingComma': 'none',
-      'semi': false
+      'semi': false,
+      'quoteProps': 'preserve'
     }
   );
   await Promise.all([
