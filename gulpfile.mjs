@@ -3,6 +3,7 @@ import inquirer from 'inquirer';
 import util from 'util';
 import { exec, spawnSync } from 'child_process';
 import chalk from 'chalk';
+import Prettier from 'prettier';
 const execPromise = util.promisify(exec);
 
 const npmPublish = (version) => {
@@ -83,6 +84,7 @@ const checkVersion = async (oldVersion) => {
 async function changeVersion(version) {
   const packageFile = await fs.readJSON('./package.json');
   const versionFilePath = './src/version-config.ts';
+  const versionDistPath = './dist/version-config.js';
   const configFileStr = (await fs.readFile(versionFilePath, 'utf-8'))
     .replace('/** 请勿手动修改本文件，本文件通过命令行自动生成 */\n*', '')
     .replace('export default ', '')
@@ -90,27 +92,26 @@ async function changeVersion(version) {
   const configFile = JSON.parse(configFileStr);
   packageFile.version = version;
   configFile.version = version;
+  const str = Prettier.format(
+    `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
+      configFile,
+      null,
+      2
+    )}`,
+    {
+      'singleQuote': false,
+      'trailingComma': 'none',
+      'semi': false
+    }
+  );
   await Promise.all([
     fs.writeJSON('./package.json', packageFile, {
       spaces: 2
     }),
-    fs.writeFile(
-      versionFilePath,
-      `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
-        configFile,
-        null,
-        2
-      )}`
-    ),
-    fs.writeFile(
-      './dist/version-config.js',
-      `/** 请勿手动修改本文件，本文件通过命令行自动生成 */\nexport default ${JSON.stringify(
-        configFile,
-        null,
-        2
-      )}`
-    )
+    fs.writeFile(versionFilePath, str),
+    fs.writeFile(versionDistPath, str)
   ]);
+
   console.log(`.env, package.json 的版本号已更新为${version}`);
 }
 
