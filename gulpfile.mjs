@@ -134,7 +134,7 @@ export async function publish() {
       await changeVersion(version);
     }
     const branch = (await execPromise('git rev-parse --abbrev-ref HEAD')).stdout.trim();
-    if (branch === 'master') {
+    if (branch === 'master' || branch === 'main') {
       // 判断是否是`master`分支，如果是，允许任意版本发布
       npmPublish(version);
       spawnSync(`git add . && git commit -m "build: release v${version}"`, {
