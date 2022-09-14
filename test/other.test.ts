@@ -125,4 +125,26 @@ describe('check other option', () => {
       expect(console.warn).toBeCalled();
     });
   });
+
+  describe('!1E', () => {
+    const rule: CalRule = init('!1E', {
+      'other': true
+    });
+    const choices = [
+      ['A', 'B', 'C', 'D'],
+      ['A', 'B', 'C', 'D'],
+      ['A', 'B', 'C', 'D'],
+      ['A', 'B', 'C', 'D']
+    ];
+    it('!1E => true', () => {
+      rule.choices = choices;
+      rule.values = ['A'];
+      expect(rule.parse()).toBe(true);
+    });
+    it('!1E => true', () => {
+      rule.choices = choices;
+      rule.values = ['Extra'];
+      expect(rule.parse()).toBe(false);
+    });
+  });
 });

@@ -128,11 +128,24 @@ class CalRule<Choice = any, Value = Choice> {
       str += ele;
       str += checkedArr[index] ?? '';
     });
+
     if (!acceptableRegex.test(str)) {
       throw new CalRuleXssError();
     }
     try {
       const ans = Function(`return ${str};`)();
+      if (str.startsWith('!')) {
+        // To make `!true` str valid
+        const trimExclamation = (str: string): string => {
+          if (str.startsWith('!')) {
+            str = str.substring(1);
+            return trimExclamation(str);
+          } else {
+            return str;
+          }
+        };
+        str = trimExclamation(str);
+      }
       if (typeof ans !== 'number' && !['true', 'false'].includes(str)) {
         throw new CalRuleXssError();
       }
