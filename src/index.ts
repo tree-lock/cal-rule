@@ -15,7 +15,7 @@ export const defaultCalculator = <Choice = any, Value = Choice>(
   value: Value | undefined,
   choice: Choice | undefined,
   /** useful only when set `other` true and choice is undefined */
-  excludes?: Choice[]
+  excludes?: Choice[] | readonly Choice[]
 ): boolean => {
   if (typeof value === 'string' && value.length === 0) {
     if (typeof choice === 'string' && choice === '') return true;
@@ -69,9 +69,9 @@ export const defaultCalculator = <Choice = any, Value = Choice>(
 
 class CalRule<Choice = any, Value = Choice> {
   readonly rule: string;
-  private readonly ruleArr: string[];
-  private readonly checkIndex: [number, number][];
-  private readonly calArr: string[];
+  readonly ruleArr: string[];
+  readonly checkIndex: (readonly [number, number])[];
+  readonly calArr: string[];
 
   constructor(rule: string) {
     this.rule = rule;
@@ -86,13 +86,13 @@ class CalRule<Choice = any, Value = Choice> {
       const numIndex = Number((item.match(/\d+/) as Array<string>)[0]) - 1;
       const alphabet = (item.match(/[A-Z]/) ?? [])[0];
       const alphabetIndex = alphabet ? alphabet.charCodeAt(0) - 'A'.charCodeAt(0) : -1;
-      return [numIndex, alphabetIndex];
+      return [numIndex, alphabetIndex] as const;
     });
 
     this.combine(new Array(this.checkIndex.length).fill(true));
   }
 
-  choices!: (Choice[] | undefined)[];
+  choices!: (Choice[] | undefined)[] | Readonly<Readonly<Choice[]>[]>;
   values!: (Value | undefined)[];
   /**
    * If required choice at `choices[x].length` position missing while `other` option set true,
@@ -119,9 +119,10 @@ class CalRule<Choice = any, Value = Choice> {
   calculator!: (
     value: Value | undefined,
     choice: Choice | undefined,
-    excludes?: Choice[]
+    excludes?: Choice[] | readonly Choice[]
   ) => boolean;
 
+  /** output answer */
   private combine = (checkedArr: boolean[]) => {
     let str = '';
     this.calArr.forEach((ele, index) => {
@@ -163,7 +164,7 @@ class CalRule<Choice = any, Value = Choice> {
     calculator: (
       value: Value | undefined,
       choice: Choice | undefined,
-      excludes?: Choice[]
+      excludes?: Choice[] | readonly Choice[]
     ) => boolean = this.calculator
   ) {
     if (!this.choices || !this.values || !this.calculator) {

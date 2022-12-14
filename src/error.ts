@@ -44,7 +44,11 @@ export class CalRuleXssError extends Error {
 }
 
 /** There will be a warning out, if choice(s) at `position` is required but not provided */
-export const ChoiceMissingWarning = (position: number[], ruleItem: string, rule: CalRule) => {
+export const ChoiceMissingWarning = (
+  position: readonly number[],
+  ruleItem: string,
+  rule: CalRule
+) => {
   if (config.warning) {
     console.warn(
       `[cal-rule]: ${rule.rule} require choice${
